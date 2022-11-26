@@ -1,4 +1,4 @@
-use image::Rgb;
+use image::{ImageBuffer, Rgb};
 
 /// Square root of 2
 const SQRT2: f32 = 1.4142135623730951;
@@ -6,7 +6,7 @@ const SQRT2: f32 = 1.4142135623730951;
 // Colors
 const RGB_BLACK: Rgb<u8> = image::Rgb([0u8, 0u8, 0u8]);
 const RGB_WHITE: Rgb<u8> = image::Rgb([255u8, 255u8, 255u8]);
-const _RGB_GRAY: Rgb<u8> = image::Rgb([150u8, 150u8, 150u8]);
+const RGB_GRAY: Rgb<u8> = image::Rgb([150u8, 150u8, 150u8]);
 
 // Debug colors
 #[allow(dead_code)]
@@ -19,29 +19,55 @@ const COLORS: &'static [[u8; 3]] = &[
   [255, 150, 0],
 ];
 
+// pub struct Colors {
+//   fg: Rgb<u8>,
+//   bg: Rgb<u8>,
+//   outline: Rgb<u8>,
+// }
+
 pub struct Config {
-  /// Columns to wrap text at
-  pub max_columns: u32,
   /// Size of tile
   pub tile_size: u32,
   /// Padding size for tile
   pub padding: u32,
-  /// More padding for sides
-  pub padding_side: u32,
+  /// Columns to wrap text at
+  pub columns: u32,
   /// Stroke width
   pub stroke: u32,
+  /// Show grey outline or not
+  pub do_outline: bool,
+  /// More padding for sides
+  /// ? Why ?
+  padding_side: u32,
 }
 
-pub fn make_image(text: &Vec<Char>, config: &Config) {
+impl Default for Config {
+  fn default() -> Self {
+    Config::new(100, 10, 6, 2, false)
+  }
+}
+
+impl Config {
+  pub fn new(tile_size: u32, padding: u32, columns: u32, stroke: u32, do_outline: bool) -> Self {
+    Config {
+      columns,
+      tile_size,
+      padding,
+      padding_side: padding,
+      stroke,
+      do_outline,
+    }
+  }
+}
+
+pub fn make_image(text: &Vec<Char>, config: &Config) -> ImageBuffer<Rgb<u8>, Vec<u8>> {
   // Size of tile map (Scaled down image)
-  let cols = std::cmp::min(text.len() as u32, config.max_columns);
+  let cols = std::cmp::min(text.len() as u32, config.columns);
   let rows = (text.len() as f32 / cols as f32).ceil() as u32;
 
   //  Size of image
   let img_x = cols * (config.tile_size);
   let img_y = rows * (config.tile_size);
-
-  println!("Size: {img_x}x{img_y}");
 
   // Create a new ImgBuf with size
   let mut img = image::ImageBuffer::new(img_x, img_y);
@@ -60,23 +86,23 @@ pub fn make_image(text: &Vec<Char>, config: &Config) {
     }
 
     // Background - white / gray at edge
-    *pixel = if std::cmp::min(
-      config.tile_size - (x % config.tile_size),
-      config.tile_size / 2 - (y % (config.tile_size / 2)),
-    ) == 1
+    *pixel = if config.do_outline
+      && std::cmp::min(
+        config.tile_size - (x % config.tile_size),
+        config.tile_size / 2 - (y % (config.tile_size / 2)),
+      ) == 1
     {
-      RGB_WHITE
-      // RGB_GRAY
+      RGB_GRAY
     } else {
       RGB_WHITE
     }
   }
 
-  img.save("./image.png").expect("Could not save image");
+  img
 }
 
 /// Check if stroke is at x and y
-pub fn check_stroke(ch: Char, x: u32, y: u32, config: &Config) -> bool {
+fn check_stroke(ch: Char, x: u32, y: u32, config: &Config) -> bool {
   // Decide character part, adjust y if is bottom
   let (ch_part, y) = if y <= config.tile_size / 2 {
     (ch.0, y)
@@ -184,10 +210,10 @@ fn diff(a: u32, b: u32) -> u32 {
 }
 
 /// Encrypted character
-type Char = (u8, u8);
+pub type Char = (u8, u8);
 
 /// Map of characters
-const MAP: &'static [&'static str] = &[
+pub const MAP: &'static [&'static str] = &[
   "pbtdkg",
   "fvszcj",
   "mnrlwy",
