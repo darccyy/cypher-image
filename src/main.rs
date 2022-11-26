@@ -1,4 +1,4 @@
-use cypher::{encrypt_text, make_image, Config};
+use cypher_image::{encrypt_text, make_image, Config};
 
 fn main() {
   let text = std::env::args().nth(1).expect("No text given");
